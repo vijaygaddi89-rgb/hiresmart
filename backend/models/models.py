@@ -1,19 +1,21 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
+# backend/models/models.py
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(150), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    resumes = relationship("Resume", back_populates="owner")
+    resumes = relationship("Resume", back_populates="user")
     sessions = relationship("InterviewSession", back_populates="user")
 
 
@@ -22,14 +24,15 @@ class Resume(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    filename = Column(String(255))
-    raw_text = Column(Text)
-    parsed_skills = Column(Text)
-    parsed_education = Column(Text)
-    parsed_experience = Column(Text)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    filename = Column(String, nullable=False)
+    raw_text = Column(Text, nullable=True)
+    parsed_skills = Column(Text, nullable=True)
+    extracted_email = Column(String, nullable=True)
+    extracted_phone = Column(String, nullable=True)
+    years_of_experience = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    owner = relationship("User", back_populates="resumes")
+    user = relationship("User", back_populates="resumes")
 
 
 class InterviewSession(Base):
@@ -37,12 +40,9 @@ class InterviewSession(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    job_title = Column(String(200))
-    job_description = Column(Text)
-    session_score = Column(Float, default=0.0)
-    status = Column(String(50), default="in_progress")
-    started_at = Column(DateTime, default=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
+    job_role = Column(String, nullable=True)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="sessions")
     feedbacks = relationship("Feedback", back_populates="session")
@@ -53,12 +53,10 @@ class Feedback(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("interview_sessions.id"), nullable=False)
-    question = Column(Text, nullable=False)
-    user_answer = Column(Text)
-    score = Column(Float, default=0.0)
-    strengths = Column(Text)
-    improvements = Column(Text)
-    example_answer = Column(Text)
+    question = Column(Text, nullable=True)
+    answer = Column(Text, nullable=True)
+    score = Column(Integer, nullable=True)
+    feedback_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("InterviewSession", back_populates="feedbacks")
