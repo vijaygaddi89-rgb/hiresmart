@@ -1,44 +1,29 @@
-from database import SessionLocal, engine, Base
-from models.models import User, Resume, InterviewSession
+# backend/seed.py
 
-Base.metadata.create_all(bind=engine)
+from database import SessionLocal
+from models.models import User
+from services.auth_service import hash_password
 
 def seed():
     db = SessionLocal()
+    try:
+        # Clear existing users
+        db.query(User).delete()
+        db.commit()
 
-    # Check if already seeded
-    existing = db.query(User).first()
-    if existing:
-        print("Database already seeded!")
+        users = [
+            User(name="Vijay", email="vijay@example.com",
+                 hashed_password=hash_password("vijay123")),
+            User(name="Alice", email="alice@example.com",
+                 hashed_password=hash_password("alice123")),
+            User(name="Bob",   email="bob@example.com",
+                 hashed_password=hash_password("bob123")),
+        ]
+        db.add_all(users)
+        db.commit()
+        print("✅ Seeded 3 users with hashed passwords")
+    finally:
         db.close()
-        return
-
-    # Create 3 test users
-    users = [
-        User(
-            name="Vijay Test",
-            email="vijay@test.com",
-            hashed_password="hashed_dummy_password_1",
-            is_active=True
-        ),
-        User(
-            name="Alice Smith",
-            email="alice@test.com",
-            hashed_password="hashed_dummy_password_2",
-            is_active=True
-        ),
-        User(
-            name="Bob Jones",
-            email="bob@test.com",
-            hashed_password="hashed_dummy_password_3",
-            is_active=True
-        ),
-    ]
-
-    db.add_all(users)
-    db.commit()
-    print(f"✅ Seeded {len(users)} users successfully!")
-    db.close()
 
 if __name__ == "__main__":
     seed()

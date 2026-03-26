@@ -1,21 +1,25 @@
+# backend/main.py
+
 from fastapi import FastAPI
-from config import APP_NAME, DEBUG
+from api.auth import router as auth_router
 
 app = FastAPI(
-    title=APP_NAME,
-    description="AI-powered mock interview preparation platform",
-    version="1.0.0",
-    debug=DEBUG
+    title="HireSmart API",
+    description="AI-Powered Interview Preparation Platform",
+    version="0.3.0"
 )
 
-@app.get("/", tags=["Root"])
-def root():
-    return {"message": f"Welcome to {APP_NAME}"}
 
-@app.get("/health", tags=["Health"])
-def health_check():
-    return {
-        "status": "healthy",
-        "app": APP_NAME,
-        "version": "1.0.0"
-    }
+# ── Routers ───────────────────────────────────────────────────
+app.include_router(auth_router)
+
+
+# ── Core Endpoints ────────────────────────────────────────────
+@app.get("/")
+def root():
+    return {"message": "HireSmart API is running 🚀"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "version": "0.3.0"}
