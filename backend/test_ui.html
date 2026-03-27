@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HireSmart — Test UI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 40px; max-width: 860px; margin: auto; }
+    h1 { color: #facc15; margin-bottom: 8px; }
+    p.sub { color: #888; margin-bottom: 32px; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    label { display: block; margin-bottom: 8px; color: #facc15; font-weight: bold; }
+    input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 14px; margin-bottom: 12px; }
+    textarea { resize: vertical; }
+    button { padding: 12px 28px; background: #facc15; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; }
+    button:hover { background: #eab308; }
+    pre { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; white-space: pre-wrap; margin-top: 16px; font-size: 13px; color: #4ade80; min-height: 50px; }
+    .file-row { display: flex; align-items: center; gap: 12px; }
+    .file-row input[type=file] { flex: 1; }
+    .step-num { display: inline-block; background: #facc15; color: #000; font-weight: bold; border-radius: 50%; width: 28px; height: 28px; text-align: center; line-height: 28px; margin-right: 8px; }
+  </style>
+</head>
+<body>
+
+<h1>⚡ HireSmart Test UI</h1>
+<p class="sub">Test your full API like a real user — no Swagger needed.</p>
+
+<!-- STEP 1: LOGIN -->
+<div class="card">
+  <label><span class="step-num">1</span>Login</label>
+  <input id="email" placeholder="Email" value="alice@example.com" />
+  <input id="password" type="password" placeholder="Password" value="password123" />
+  <button onclick="login()">Login →</button>
+  <pre id="login-result">Status will appear here...</pre>
+</div>
+
+<!-- STEP 2: UPLOAD RESUME -->
+<div class="card">
+  <label><span class="step-num">2</span>Upload Resume (PDF or DOCX)</label>
+  <div class="file-row">
+    <input type="file" id="resume-file" accept=".pdf,.docx" />
+    <button onclick="uploadResume()">Upload Resume →</button>
+  </div>
+  <pre id="resume-result">Upload result will appear here...</pre>
+</div>
+
+<!-- STEP 3: SKILL GAP -->
+<div class="card">
+  <label><span class="step-num">3</span>Paste Job Description & Analyze Skill Gap</label>
+  <input id="job-title" placeholder="Job Title  e.g. Data Scientist" />
+  <textarea id="job-desc" rows="10" placeholder="Paste the full job description here..."></textarea>
+  <button onclick="analyzeSkillGap()">Analyze Skill Gap →</button>
+  <pre id="gap-result">Results will appear here...</pre>
+</div>
+
+<script>
+  const BASE = "http://127.0.0.1:8000";
+  let token = "";
+
+  async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    if (data.access_token) {
+      token = data.access_token;
+      document.getElementById("login-result").textContent = "✅ Logged in successfully! Token saved.";
+    } else {
+      document.getElementById("login-result").textContent = "❌ " + JSON.stringify(data);
+    }
+  }
+
+  async function uploadResume() {
+    if (!token) {
+      document.getElementById("resume-result").textContent = "❌ Login first!";
+      return;
+    }
+    const file = document.getElementById("resume-file").files[0];
+    if (!file) {
+      document.getElementById("resume-result").textContent = "❌ Select a file first!";
+      return;
+    }
+
+    document.getElementById("resume-result").textContent = "⏳ Uploading and parsing with Claude...";
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${BASE}/resume/upload`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData
+    });
+
+    const data = await res.json();
+    document.getElementById("resume-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function analyzeSkillGap() {
+    if (!token) {
+      document.getElementById("gap-result").textContent = "❌ Login first!";
+      return;
+    }
+
+    const job_title = document.getElementById("job-title").value;
+    const job_description = document.getElementById("job-desc").value;
+
+    if (!job_title || !job_description) {
+      document.getElementById("gap-result").textContent = "❌ Fill in job title and description!";
+      return;
+    }
+
+    document.getElementById("gap-result").textContent = "⏳ Analyzing with Claude...";
+
+    const params = new URLSearchParams({ job_title, job_description });
+    const res = await fetch(`${BASE}/jobs/skill-gap?${params}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+    document.getElementById("gap-result").textContent = JSON.stringify(data, null, 2);
+  }
+</script>
+
+</body>
+</html>

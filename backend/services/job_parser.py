@@ -1,14 +1,13 @@
 # backend/services/job_parser.py
 
 import json
-import os
-import anthropic
+from anthropic import AsyncAnthropic
 from decouple import config
 
-# Initialize Claude client once at module level
-client = anthropic.Anthropic(api_key=config("ANTHROPIC_API_KEY"))
+# Async client for FastAPI compatibility
+client = AsyncAnthropic(api_key=config("ANTHROPIC_API_KEY"))
 
-def extract_skills_from_jd(job_title: str, job_description: str) -> list[str]:
+async def extract_skills_from_jd(job_title: str, job_description: str) -> list[str]:
     """
     Use Claude to extract required skills from a job description.
     Returns a clean list of skill strings.
@@ -33,21 +32,24 @@ Rules:
 
 Return only the JSON array:"""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-5",
+    message = await client.messages.create(
+        model="claude-haiku-4-5-20251001",
         max_tokens=500,
         messages=[
             {"role": "user", "content": prompt}
         ]
     )
 
-    # Extract text response
     response_text = message.content[0].text.strip()
 
-    # Parse JSON array
+    # Clean markdown if Claude wraps in backticks
+    if response_text.startswith("```"):
+        response_text = response_text.split("```")[1]
+        if response_text.startswith("json"):
+            response_text = response_text[4:]
+    
     skills = json.loads(response_text)
 
-    # Ensure it's a list of strings
     if not isinstance(skills, list):
         return []
 
