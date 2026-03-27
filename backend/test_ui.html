@@ -18,6 +18,12 @@
     .file-row { display: flex; align-items: center; gap: 12px; }
     .file-row input[type=file] { flex: 1; }
     .step-num { display: inline-block; background: #facc15; color: #000; font-weight: bold; border-radius: 50%; width: 28px; height: 28px; text-align: center; line-height: 28px; margin-right: 8px; }
+    .question-list { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .question-item { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; color: #e0e0e0; font-size: 14px; display: flex; gap: 12px; align-items: flex-start; }
+    .q-num { background: #facc15; color: #000; font-weight: bold; border-radius: 50%; width: 28px; height: 28px; min-width: 28px; text-align: center; line-height: 28px; font-size: 13px; }
+    .q-text { line-height: 1.6; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 4px; }
+    .badge-success { background: #14532d; color: #4ade80; }
   </style>
 </head>
 <body>
@@ -51,6 +57,14 @@
   <textarea id="job-desc" rows="10" placeholder="Paste the full job description here..."></textarea>
   <button onclick="analyzeSkillGap()">Analyze Skill Gap →</button>
   <pre id="gap-result">Results will appear here...</pre>
+</div>
+
+<!-- STEP 4: GENERATE INTERVIEW QUESTIONS -->
+<div class="card">
+  <label><span class="step-num">4</span>Generate Interview Questions (RAG + Claude AI)</label>
+  <textarea id="interview-jd" rows="8" placeholder="Paste job description here to generate personalized questions from your resume..."></textarea>
+  <button onclick="generateQuestions()">Generate Questions →</button>
+  <div id="questions-output"></div>
 </div>
 
 <script>
@@ -126,7 +140,59 @@
     const data = await res.json();
     document.getElementById("gap-result").textContent = JSON.stringify(data, null, 2);
   }
+
+  async function generateQuestions() {
+    const output = document.getElementById("questions-output");
+
+    if (!token) {
+      output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`;
+      return;
+    }
+
+    const jd = document.getElementById("interview-jd").value;
+    if (!jd) {
+      output.innerHTML = `<pre style="color:#f87171">❌ Paste a job description first!</pre>`;
+      return;
+    }
+
+    output.innerHTML = `<pre style="color:#facc15">⏳ RAG retrieving context → Claude generating questions...</pre>`;
+
+    const res = await fetch(`${BASE}/interview/generate-questions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ job_description: jd })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      output.innerHTML = `<pre style="color:#f87171">❌ ${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+
+    // Render questions as cards
+    let html = `<div style="margin-top:12px; margin-bottom:8px; color:#888; font-size:13px;">
+      Session ID: <strong style="color:#facc15">${data.session_id}</strong> &nbsp;|&nbsp; 
+      <span class="badge badge-success">✅ ${data.total} Questions Generated</span>
+    </div>`;
+
+    html += `<div class="question-list">`;
+    data.questions.forEach((q, i) => {
+      html += `
+        <div class="question-item">
+          <div class="q-num">${i + 1}</div>
+          <div class="q-text">${q}</div>
+        </div>`;
+    });
+    html += `</div>`;
+
+    output.innerHTML = html;
+  }
 </script>
 
 </body>
 </html>
+

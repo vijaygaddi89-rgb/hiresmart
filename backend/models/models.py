@@ -1,5 +1,3 @@
-# backend/models/models.py
-
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -33,6 +31,7 @@ class Resume(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="resumes")
+    sessions = relationship("InterviewSession", back_populates="resume")  # ← NEW
 
 
 class InterviewSession(Base):
@@ -40,11 +39,14 @@ class InterviewSession(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)   # ← NEW
+    questions = Column(Text, nullable=True)                                 # ← NEW
     job_role = Column(String, nullable=True)
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="sessions")
+    resume = relationship("Resume", back_populates="sessions")             # ← NEW
     feedbacks = relationship("Feedback", back_populates="session")
 
 

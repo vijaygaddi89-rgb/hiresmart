@@ -7,8 +7,9 @@ from services.job_parser import extract_skills_from_jd
 from api.auth import get_current_user
 from models.models import User
 import json
+import ast
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+router = APIRouter(tags=["jobs"])
 
 
 # --- Request/Response Schemas ---
@@ -40,10 +41,7 @@ async def analyze_job_description(
     request: JobAnalyzeRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Extract required skills from a job description using Claude."""
-    
     skills = await extract_skills_from_jd(request.job_title, request.job_description)
-    
     return JobAnalyzeResponse(
         job_title=request.job_title,
         required_skills=skills,
@@ -58,23 +56,21 @@ async def get_skill_gap(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Compare resume skills vs job skills and return gap analysis."""
-
     # 1. Get user's resume from DB
     resume = db.query(Resume).filter(Resume.user_id == current_user.id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="No resume found. Please upload your resume first.")
 
-    # 2. Parse resume skills (stored as JSON string in DB)
+    # 2. Parse resume skills — stored as Python list string e.g. "['python', 'sql']"
     try:
-        resume_skills = json.loads(resume.parsed_skills) if resume.parsed_skills else []
-    except (json.JSONDecodeError, TypeError):
+        resume_skills = ast.literal_eval(resume.parsed_skills) if resume.parsed_skills else []
+    except (ValueError, SyntaxError, TypeError):
         resume_skills = []
 
     # 3. Extract job skills via Claude
     job_skills = await extract_skills_from_jd(job_title, job_description)
 
-    # 4. Normalize everything to lowercase for fair comparison
+    # 4. Normalize to lowercase for fair comparison
     resume_skills_lower = [s.lower().strip() for s in resume_skills]
     job_skills_lower = [s.lower().strip() for s in job_skills]
 

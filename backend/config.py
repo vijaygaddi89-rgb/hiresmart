@@ -10,6 +10,7 @@ class Settings:
         "ACCESS_TOKEN_EXPIRE_MINUTES", default=60, cast=int
     )
     DATABASE_URL: str = config("DATABASE_URL", default="sqlite:///./hiresmart.db")
+    ANTHROPIC_API_KEY: str = config("ANTHROPIC_API_KEY", default="")
 
 
 settings = Settings()

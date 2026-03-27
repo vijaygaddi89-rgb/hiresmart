@@ -1,13 +1,15 @@
 # backend/seed.py
 
-from database import SessionLocal
+from database import SessionLocal, Base, engine
 from models.models import User
 from services.auth_service import hash_password
 
 def seed():
+    # Create all tables first
+    Base.metadata.create_all(bind=engine)
+    
     db = SessionLocal()
     try:
-        # Clear existing users
         db.query(User).delete()
         db.commit()
 

@@ -1,20 +1,11 @@
-# backend/main.py
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from api.auth import router as auth_router
-from api.resume import router as resume_router
-from api.jobs import router as jobs_router
-import os
+from api import auth, resume, jobs, interview
 
-app = FastAPI(
-    title="HireSmart API",
-    description="AI-Powered Interview Preparation Platform",
-    version="0.5.0"
-)
+app = FastAPI(title="HireSmart API", version="1.0.0")
 
-# ── CORS Middleware ───────────────────────────────────────────
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,22 +14,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────────
-app.include_router(auth_router)
-app.include_router(resume_router)
-app.include_router(jobs_router)
+# Routers
+app.include_router(auth.router, prefix="/auth")
+app.include_router(resume.router, prefix="/resume")
+app.include_router(jobs.router, prefix="/jobs")
+app.include_router(interview.router, prefix="/interview")
 
-# ── Serve Test UI ─────────────────────────────────────────────
-@app.get("/ui")
-def serve_ui():
-    ui_path = os.path.join(os.path.dirname(__file__), "test_ui.html")
-    return FileResponse(ui_path)
-
-# ── Core Endpoints ────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"message": "HireSmart API is running 🚀"}
+    return {"message": "HireSmart API is running"}
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "version": "0.5.0"}
+    return {"status": "healthy"}
+
+@app.get("/ui")
+def serve_ui():
+    return FileResponse("test_ui.html")

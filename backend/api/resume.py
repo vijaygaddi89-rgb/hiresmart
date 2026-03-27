@@ -1,6 +1,5 @@
 # backend/api/resume.py
 
-import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 
@@ -9,7 +8,7 @@ from api.auth import get_current_user
 from models.models import User, Resume
 from services.resume_parser import parse_resume
 
-router = APIRouter(prefix="/resume", tags=["Resume"])
+router = APIRouter(tags=["Resume"])
 
 # Allowed file types
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
@@ -65,7 +64,7 @@ async def upload_resume(
     if existing:
         existing.filename = filename
         existing.raw_text = parsed["raw_text"]
-        existing.parsed_skills = json.dumps(parsed["extracted_skills"])
+        existing.parsed_skills = str(parsed["extracted_skills"])
         existing.extracted_email = parsed["extracted_email"]
         existing.extracted_phone = parsed["extracted_phone"]
         existing.years_of_experience = parsed["years_of_experience"]
@@ -77,7 +76,7 @@ async def upload_resume(
             user_id=current_user.id,
             filename=filename,
             raw_text=parsed["raw_text"],
-            parsed_skills=json.dumps(parsed["extracted_skills"]),
+            parsed_skills=str(parsed["extracted_skills"]),
             extracted_email=parsed["extracted_email"],
             extracted_phone=parsed["extracted_phone"],
             years_of_experience=parsed["years_of_experience"],
@@ -119,6 +118,6 @@ def get_my_resume(
         "extracted_email": resume.extracted_email,
         "extracted_phone": resume.extracted_phone,
         "years_of_experience": resume.years_of_experience,
-        "skills": json.loads(resume.parsed_skills) if resume.parsed_skills else [],
+        "skills": eval(resume.parsed_skills) if resume.parsed_skills else [],
         "uploaded_at": resume.created_at,
     }
