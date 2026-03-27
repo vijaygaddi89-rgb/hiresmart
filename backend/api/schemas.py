@@ -1,13 +1,10 @@
 # backend/api/schemas.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional
+from typing import Optional, List
 
-
-# ── Auth Schemas ──────────────────────────────────────────────
-
-from pydantic import BaseModel, EmailStr, field_validator
 
 class UserRegister(BaseModel):
     name: str
@@ -47,3 +44,26 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True   # Allows building from SQLAlchemy model objects
+
+# ── Resume Schemas ─────────────────────────────────────────────────────────────
+class ResumeResponse(BaseModel):
+    id: int
+    filename: str
+    extracted_skills: Optional[List[str]] = []
+
+    class Config:
+        from_attributes = True
+
+# ── Job Description Schemas ────────────────────────────────────────────────────
+class JobDescriptionInput(BaseModel):
+    job_title: str
+    job_description: str
+    resume_id: int
+
+class SkillGapResponse(BaseModel):
+    job_title: str
+    required_skills: List[str]
+    matched_skills: List[str]
+    missing_skills: List[str]
+    match_score: float
+    recommendation: str
