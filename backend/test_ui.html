@@ -24,6 +24,18 @@
     .q-text { line-height: 1.6; }
     .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 4px; }
     .badge-success { background: #14532d; color: #4ade80; }
+
+    /* Evaluation result styles */
+    .eval-result { margin-top: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .score-box { background: #111; border: 2px solid #facc15; border-radius: 12px; padding: 20px; text-align: center; }
+    .score-number { font-size: 56px; font-weight: bold; color: #facc15; line-height: 1; }
+    .score-label { font-size: 14px; color: #888; margin-top: 4px; }
+    .eval-section { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; }
+    .eval-section h3 { font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .eval-section p { font-size: 14px; line-height: 1.7; color: #d0d0d0; }
+    .strengths h3 { color: #4ade80; }
+    .improvements h3 { color: #f87171; }
+    .ideal h3 { color: #60a5fa; }
   </style>
 </head>
 <body>
@@ -67,6 +79,22 @@
   <div id="questions-output"></div>
 </div>
 
+<!-- STEP 5: EVALUATE ANSWER -->
+<div class="card">
+  <label><span class="step-num">5</span>Evaluate Your Answer (Claude AI Coach)</label>
+  <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Question Asked</label>
+  <textarea id="eval-question" rows="3" placeholder="Paste or type the interview question here..."></textarea>
+
+  <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Your Answer</label>
+  <textarea id="eval-answer" rows="6" placeholder="Type your answer here as you would in a real interview..."></textarea>
+
+  <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Job Description (optional — for better context)</label>
+  <textarea id="eval-jd" rows="4" placeholder="Paste the job description for more relevant feedback..."></textarea>
+
+  <button onclick="evaluateAnswer()">Evaluate My Answer →</button>
+  <div id="eval-output"></div>
+</div>
+
 <script>
   const BASE = "http://127.0.0.1:8000";
   let token = "";
@@ -91,17 +119,11 @@
   }
 
   async function uploadResume() {
-    if (!token) {
-      document.getElementById("resume-result").textContent = "❌ Login first!";
-      return;
-    }
+    if (!token) { document.getElementById("resume-result").textContent = "❌ Login first!"; return; }
     const file = document.getElementById("resume-file").files[0];
-    if (!file) {
-      document.getElementById("resume-result").textContent = "❌ Select a file first!";
-      return;
-    }
+    if (!file) { document.getElementById("resume-result").textContent = "❌ Select a file first!"; return; }
 
-    document.getElementById("resume-result").textContent = "⏳ Uploading and parsing with Claude...";
+    document.getElementById("resume-result").textContent = "⏳ Uploading and parsing...";
 
     const formData = new FormData();
     formData.append("file", file);
@@ -117,10 +139,7 @@
   }
 
   async function analyzeSkillGap() {
-    if (!token) {
-      document.getElementById("gap-result").textContent = "❌ Login first!";
-      return;
-    }
+    if (!token) { document.getElementById("gap-result").textContent = "❌ Login first!"; return; }
 
     const job_title = document.getElementById("job-title").value;
     const job_description = document.getElementById("job-desc").value;
@@ -143,26 +162,16 @@
 
   async function generateQuestions() {
     const output = document.getElementById("questions-output");
-
-    if (!token) {
-      output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`;
-      return;
-    }
+    if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
 
     const jd = document.getElementById("interview-jd").value;
-    if (!jd) {
-      output.innerHTML = `<pre style="color:#f87171">❌ Paste a job description first!</pre>`;
-      return;
-    }
+    if (!jd) { output.innerHTML = `<pre style="color:#f87171">❌ Paste a job description first!</pre>`; return; }
 
     output.innerHTML = `<pre style="color:#facc15">⏳ RAG retrieving context → Claude generating questions...</pre>`;
 
     const res = await fetch(`${BASE}/interview/generate-questions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify({ job_description: jd })
     });
 
@@ -173,9 +182,8 @@
       return;
     }
 
-    // Render questions as cards
     let html = `<div style="margin-top:12px; margin-bottom:8px; color:#888; font-size:13px;">
-      Session ID: <strong style="color:#facc15">${data.session_id}</strong> &nbsp;|&nbsp; 
+      Session ID: <strong style="color:#facc15">${data.session_id}</strong> &nbsp;|&nbsp;
       <span class="badge badge-success">✅ ${data.total} Questions Generated</span>
     </div>`;
 
@@ -188,11 +196,67 @@
         </div>`;
     });
     html += `</div>`;
-
     output.innerHTML = html;
+  }
+
+  async function evaluateAnswer() {
+    const output = document.getElementById("eval-output");
+    if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
+
+    const question = document.getElementById("eval-question").value;
+    const answer = document.getElementById("eval-answer").value;
+    const job_description = document.getElementById("eval-jd").value;
+
+    if (!question || !answer) {
+      output.innerHTML = `<pre style="color:#f87171">❌ Fill in both the question and your answer!</pre>`;
+      return;
+    }
+
+    output.innerHTML = `<pre style="color:#facc15">⏳ Claude is evaluating your answer...</pre>`;
+
+    const res = await fetch(`${BASE}/interview/evaluate-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ question, answer, job_description })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      output.innerHTML = `<pre style="color:#f87171">❌ ${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+
+    // Color score based on value
+    const score = data.score;
+    const scoreColor = score >= 8 ? "#4ade80" : score >= 5 ? "#facc15" : "#f87171";
+
+    output.innerHTML = `
+      <div class="eval-result">
+
+        <div class="score-box">
+          <div class="score-number" style="color:${scoreColor}">${score}<span style="font-size:24px; color:#888">/10</span></div>
+          <div class="score-label">Interview Answer Score</div>
+        </div>
+
+        <div class="eval-section strengths">
+          <h3>✅ Strengths</h3>
+          <p>${data.strengths || "—"}</p>
+        </div>
+
+        <div class="eval-section improvements">
+          <h3>⚠️ Improvements</h3>
+          <p>${data.improvements || "—"}</p>
+        </div>
+
+        <div class="eval-section ideal">
+          <h3>💡 Ideal Answer</h3>
+          <p>${data.ideal_answer || "—"}</p>
+        </div>
+
+      </div>`;
   }
 </script>
 
 </body>
 </html>
-

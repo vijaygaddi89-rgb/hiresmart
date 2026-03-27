@@ -15,6 +15,7 @@ class User(Base):
 
     resumes = relationship("Resume", back_populates="user")
     sessions = relationship("InterviewSession", back_populates="user")
+    feedbacks = relationship("Feedback", back_populates="user")              # ← ADDED
 
 
 class Resume(Base):
@@ -31,7 +32,7 @@ class Resume(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="resumes")
-    sessions = relationship("InterviewSession", back_populates="resume")  # ← NEW
+    sessions = relationship("InterviewSession", back_populates="resume")
 
 
 class InterviewSession(Base):
@@ -39,14 +40,14 @@ class InterviewSession(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)   # ← NEW
-    questions = Column(Text, nullable=True)                                 # ← NEW
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)
+    questions = Column(Text, nullable=True)
     job_role = Column(String, nullable=True)
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="sessions")
-    resume = relationship("Resume", back_populates="sessions")             # ← NEW
+    resume = relationship("Resume", back_populates="sessions")
     feedbacks = relationship("Feedback", back_populates="session")
 
 
@@ -54,11 +55,14 @@ class Feedback(Base):
     __tablename__ = "feedbacks"
 
     id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("interview_sessions.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)        # ← ADDED
+    session_id = Column(Integer, ForeignKey("interview_sessions.id"), nullable=True)  # ← made nullable
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=True)
     score = Column(Integer, nullable=True)
     feedback_text = Column(Text, nullable=True)
+    ideal_answer = Column(Text, nullable=True)                               # ← ADDED
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    user = relationship("User", back_populates="feedbacks")                  # ← ADDED
     session = relationship("InterviewSession", back_populates="feedbacks")
