@@ -6,8 +6,9 @@ client = AsyncAnthropic(api_key=config("ANTHROPIC_API_KEY"))
 async def evaluate_answer(
     question: str,
     answer: str,
-    resume_text: str,
-    job_description: str
+    resume_text: str = "",
+    job_description: str = "",
+    job_role: str = "Software Engineer"
 ) -> dict:
 
     prompt = f"""You are an expert interview coach evaluating a candidate's answer.
@@ -18,11 +19,13 @@ QUESTION ASKED:
 CANDIDATE'S ANSWER:
 {answer}
 
+JOB ROLE: {job_role}
+
 CANDIDATE'S RESUME CONTEXT:
-{resume_text[:1000]}
+{resume_text[:1000] if resume_text else "Not provided"}
 
 JOB DESCRIPTION CONTEXT:
-{job_description[:500]}
+{job_description[:500] if job_description else "Not provided"}
 
 Evaluate the answer and respond in this EXACT format with no extra text before or after:
 SCORE: [number 1-10]
@@ -40,7 +43,6 @@ Be specific, honest, and constructive. Each section must be on a single line."""
 
     raw = response.content[0].text.strip()
 
-    # Default values
     result = {
         "score": 5,
         "strengths": "",
@@ -48,7 +50,6 @@ Be specific, honest, and constructive. Each section must be on a single line."""
         "ideal_answer": ""
     }
 
-    # Robust multi-line parser
     current_key = None
     buffer = []
 
@@ -83,11 +84,9 @@ Be specific, honest, and constructive. Each section must be on a single line."""
             buffer = [line.replace("IDEAL_ANSWER:", "").strip()]
 
         else:
-            # continuation of current section
             if current_key:
                 buffer.append(line)
 
-    # flush last section
     if current_key and buffer:
         result[current_key] = " ".join(buffer).strip()
 
