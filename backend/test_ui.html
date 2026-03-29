@@ -119,7 +119,7 @@
   <div id="summary-output"></div>
 </div>
 
-<div class="section-title">🛠️ One-off Tools (standalone — not saved to DB)</div>
+<div class="section-title">🛠️ One-off Tools</div>
 
 <div class="card">
   <label><span class="step-num">9</span>Generate Questions Only (RAG + Claude)</label>
@@ -129,7 +129,7 @@
 </div>
 
 <div class="card">
-  <label><span class="step-num">10</span>Evaluate Any Answer (Claude AI Coach — not saved to DB)</label>
+  <label><span class="step-num">10</span>Evaluate Any Answer (Claude AI Coach)</label>
   <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Question Asked</label>
   <textarea id="eval-question" rows="3" placeholder="Paste or type the interview question here..."></textarea>
   <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Your Answer</label>
@@ -161,6 +161,24 @@
   <label><span class="step-num">13</span>My Overall Stats</label>
   <button onclick="getOverview()">Get Overview →</button>
   <pre id="analytics-overview-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">14</span>Score Trend (for charts)</label>
+  <button onclick="getTrend()">Get Score Trend →</button>
+  <pre id="analytics-trend-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">15</span>Role Breakdown</label>
+  <button onclick="getRoleBreakdown()">Get Role Breakdown →</button>
+  <pre id="analytics-role-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">16</span>Best & Worst Sessions</label>
+  <button onclick="getBestWorst()">Get Best & Worst →</button>
+  <pre id="analytics-bestworst-result">Result will appear here...</pre>
 </div>
 
 <script>
@@ -423,7 +441,6 @@
 
   async function saveAnalytics() {
     if (!token) { document.getElementById("analytics-save-result").textContent = "❌ Login first!"; return; }
-    // ← FIXED: parseInt prevents empty string being sent as URL segment
     const inputVal = parseInt(document.getElementById("analytics-session-id").value);
     const session_id = inputVal || activeSessionId;
     if (!session_id) { document.getElementById("analytics-save-result").textContent = "❌ No session ID found! Start a session first."; return; }
@@ -454,6 +471,36 @@
     });
     const data = await res.json();
     document.getElementById("analytics-overview-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getTrend() {
+    if (!token) { document.getElementById("analytics-trend-result").textContent = "❌ Login first!"; return; }
+    document.getElementById("analytics-trend-result").textContent = "⏳ Fetching trend...";
+    const res = await fetch(`${BASE}/analytics/trend`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-trend-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getRoleBreakdown() {
+    if (!token) { document.getElementById("analytics-role-result").textContent = "❌ Login first!"; return; }
+    document.getElementById("analytics-role-result").textContent = "⏳ Fetching role breakdown...";
+    const res = await fetch(`${BASE}/analytics/role-breakdown`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-role-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getBestWorst() {
+    if (!token) { document.getElementById("analytics-bestworst-result").textContent = "❌ Login first!"; return; }
+    document.getElementById("analytics-bestworst-result").textContent = "⏳ Fetching best & worst...";
+    const res = await fetch(`${BASE}/analytics/best-worst`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-bestworst-result").textContent = JSON.stringify(data, null, 2);
   }
 </script>
 
