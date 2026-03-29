@@ -1,7 +1,6 @@
-# backend/api/resume.py
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
+import ast
 
 from database import get_db
 from api.auth import get_current_user
@@ -10,26 +9,16 @@ from services.resume_parser import parse_resume
 
 router = APIRouter(tags=["Resume"])
 
-# Allowed file types
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 
-# ── Upload Resume ─────────────────────────────────────────────
 @router.post("/upload", status_code=201)
 async def upload_resume(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Upload and parse a resume.
-    - Accepts PDF or DOCX only
-    - Extracts text and parses skills, email, phone, experience
-    - Saves to database linked to logged-in user
-    """
-
-    # Validate file extension
     filename = file.filename
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_EXTENSIONS:
@@ -38,17 +27,14 @@ async def upload_resume(
             detail=f"File type '{ext}' not allowed. Use PDF or DOCX."
         )
 
-    # Read file bytes
     file_bytes = await file.read()
 
-    # Validate file size
     if len(file_bytes) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File too large. Maximum size is 5MB."
         )
 
-    # Parse the resume
     try:
         parsed = parse_resume(file_bytes, filename)
     except Exception as e:
@@ -57,8 +43,6 @@ async def upload_resume(
             detail=f"Failed to parse resume: {str(e)}"
         )
 
-    # Save to database
-    # If user already has a resume, update it. Otherwise create new.
     existing = db.query(Resume).filter(Resume.user_id == current_user.id).first()
 
     if existing:
@@ -99,25 +83,29 @@ async def upload_resume(
     }
 
 
-# ── Get My Resume ─────────────────────────────────────────────
 @router.get("/me")
 def get_my_resume(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get the logged-in user's parsed resume data."""
     resume = db.query(Resume).filter(Resume.user_id == current_user.id).first()
     if not resume:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No resume found. Please upload one."
         )
+
+    try:
+        skills = ast.literal_eval(resume.parsed_skills) if resume.parsed_skills else []
+    except (ValueError, SyntaxError):
+        skills = []
+
     return {
         "resume_id": resume.id,
         "filename": resume.filename,
         "extracted_email": resume.extracted_email,
         "extracted_phone": resume.extracted_phone,
         "years_of_experience": resume.years_of_experience,
-        "skills": eval(resume.parsed_skills) if resume.parsed_skills else [],
+        "skills": skills,
         "uploaded_at": resume.created_at,
     }

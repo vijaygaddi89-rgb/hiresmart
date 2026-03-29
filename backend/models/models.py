@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -66,3 +66,16 @@ class Feedback(Base):
 
     user = relationship("User", back_populates="feedbacks")                  # ← ADDED
     session = relationship("InterviewSession", back_populates="feedbacks")
+class Analytics(Base):
+    __tablename__ = "analytics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("interview_sessions.id"), nullable=True)
+    job_role = Column(String, nullable=True)
+    total_questions = Column(Integer, default=0)
+    answered_questions = Column(Integer, default=0)
+    average_score = Column(Float, default=0.0)
+    top_skill = Column(String, nullable=True)       # highest-scoring topic
+    weak_skill = Column(String, nullable=True)      # lowest-scoring topic
+    created_at = Column(DateTime, default=datetime.utcnow)    

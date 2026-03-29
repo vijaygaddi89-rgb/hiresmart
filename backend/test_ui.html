@@ -9,6 +9,7 @@
     h1 { color: #facc15; margin-bottom: 8px; }
     p.sub { color: #888; margin-bottom: 32px; }
     .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .section-title { color: #facc15; font-size: 18px; font-weight: bold; margin: 32px 0 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 8px; }
     label { display: block; margin-bottom: 8px; color: #facc15; font-weight: bold; }
     input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 14px; margin-bottom: 12px; }
     textarea { resize: vertical; }
@@ -24,8 +25,8 @@
     .q-text { line-height: 1.6; }
     .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 4px; }
     .badge-success { background: #14532d; color: #4ade80; }
-
-    /* Evaluation result styles */
+    .info-box { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #888; }
+    .info-box span { color: #facc15; font-weight: bold; }
     .eval-result { margin-top: 16px; display: flex; flex-direction: column; gap: 16px; }
     .score-box { background: #111; border: 2px solid #facc15; border-radius: 12px; padding: 20px; text-align: center; }
     .score-number { font-size: 56px; font-weight: bold; color: #facc15; line-height: 1; }
@@ -36,6 +37,13 @@
     .strengths h3 { color: #4ade80; }
     .improvements h3 { color: #f87171; }
     .ideal h3 { color: #60a5fa; }
+    .current-question-box { background: #111; border: 2px solid #facc15; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .current-question-box .q-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .current-question-box .q-body { font-size: 16px; color: #e0e0e0; line-height: 1.7; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .summary-stat { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; text-align: center; }
+    .summary-stat .val { font-size: 32px; font-weight: bold; color: #facc15; }
+    .summary-stat .key { font-size: 12px; color: #888; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -43,7 +51,8 @@
 <h1>⚡ HireSmart Test UI</h1>
 <p class="sub">Test your full API like a real user — no Swagger needed.</p>
 
-<!-- STEP 1: LOGIN -->
+<div class="section-title">🔐 Auth & Resume</div>
+
 <div class="card">
   <label><span class="step-num">1</span>Login</label>
   <input id="email" placeholder="Email" value="alice@example.com" />
@@ -52,7 +61,6 @@
   <pre id="login-result">Status will appear here...</pre>
 </div>
 
-<!-- STEP 2: UPLOAD RESUME -->
 <div class="card">
   <label><span class="step-num">2</span>Upload Resume (PDF or DOCX)</label>
   <div class="file-row">
@@ -62,7 +70,8 @@
   <pre id="resume-result">Upload result will appear here...</pre>
 </div>
 
-<!-- STEP 3: SKILL GAP -->
+<div class="section-title">🔍 Job Analysis</div>
+
 <div class="card">
   <label><span class="step-num">3</span>Paste Job Description & Analyze Skill Gap</label>
   <input id="job-title" placeholder="Job Title  e.g. Data Scientist" />
@@ -71,33 +80,94 @@
   <pre id="gap-result">Results will appear here...</pre>
 </div>
 
-<!-- STEP 4: GENERATE INTERVIEW QUESTIONS -->
+<div class="section-title">🎤 Full Interview Session (saves to DB → real analytics)</div>
+
 <div class="card">
-  <label><span class="step-num">4</span>Generate Interview Questions (RAG + Claude AI)</label>
-  <textarea id="interview-jd" rows="8" placeholder="Paste job description here to generate personalized questions from your resume..."></textarea>
+  <label><span class="step-num">4</span>Start Interview Session</label>
+  <p style="color:#888; font-size:13px; margin-bottom:12px;">Generates questions via RAG + Claude and saves them to a session in the DB.</p>
+  <input id="session-job-role" placeholder="Job Role  e.g. Software Engineer" />
+  <textarea id="session-jd" rows="6" placeholder="Paste job description here..."></textarea>
+  <button onclick="startSession()">Start Session →</button>
+  <pre id="start-result">Session info will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">5</span>Get Next Question</label>
+  <div class="info-box">Active Session ID: <span id="display-session-id">None</span></div>
+  <button onclick="getNextQuestion()">Get Next Question →</button>
+  <div id="next-question-output"></div>
+</div>
+
+<div class="card">
+  <label><span class="step-num">6</span>Submit Answer (Saves Score to DB)</label>
+  <div class="info-box">Current Question: <span id="display-current-question">None</span></div>
+  <textarea id="submit-answer" rows="6" placeholder="Type your answer here..."></textarea>
+  <button onclick="submitAnswer()">Submit Answer →</button>
+  <div id="submit-result-output"></div>
+</div>
+
+<div class="card">
+  <label><span class="step-num">7</span>Finish Session</label>
+  <p style="color:#888; font-size:13px; margin-bottom:12px;">Call this after answering all questions. Marks session as completed.</p>
+  <button onclick="finishSession()">Finish Session →</button>
+  <pre id="finish-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">8</span>Session Summary</label>
+  <button onclick="getSessionSummary()">Get Summary →</button>
+  <div id="summary-output"></div>
+</div>
+
+<div class="section-title">🛠️ One-off Tools (standalone — not saved to DB)</div>
+
+<div class="card">
+  <label><span class="step-num">9</span>Generate Questions Only (RAG + Claude)</label>
+  <textarea id="interview-jd" rows="6" placeholder="Paste job description here..."></textarea>
   <button onclick="generateQuestions()">Generate Questions →</button>
   <div id="questions-output"></div>
 </div>
 
-<!-- STEP 5: EVALUATE ANSWER -->
 <div class="card">
-  <label><span class="step-num">5</span>Evaluate Your Answer (Claude AI Coach)</label>
+  <label><span class="step-num">10</span>Evaluate Any Answer (Claude AI Coach — not saved to DB)</label>
   <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Question Asked</label>
   <textarea id="eval-question" rows="3" placeholder="Paste or type the interview question here..."></textarea>
-
   <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Your Answer</label>
   <textarea id="eval-answer" rows="6" placeholder="Type your answer here as you would in a real interview..."></textarea>
-
-  <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Job Description (optional — for better context)</label>
+  <label style="color:#aaa; font-weight:normal; margin-bottom:4px;">Job Description (optional)</label>
   <textarea id="eval-jd" rows="4" placeholder="Paste the job description for more relevant feedback..."></textarea>
-
   <button onclick="evaluateAnswer()">Evaluate My Answer →</button>
   <div id="eval-output"></div>
+</div>
+
+<div class="section-title">📊 Analytics</div>
+
+<div class="card">
+  <label><span class="step-num">11</span>Save Session Analytics</label>
+  <p style="color:#888; font-size:13px; margin-bottom:12px;">Run after finishing a session (Step 7). Auto-fills the active session ID.</p>
+  <div class="info-box">Will save analytics for Session ID: <span id="display-analytics-session-id">None</span></div>
+  <input id="analytics-session-id" placeholder="Or enter Session ID manually" type="number" />
+  <button onclick="saveAnalytics()">Save Analytics →</button>
+  <pre id="analytics-save-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">12</span>My Analytics History</label>
+  <button onclick="getHistory()">Get History →</button>
+  <pre id="analytics-history-result">Result will appear here...</pre>
+</div>
+
+<div class="card">
+  <label><span class="step-num">13</span>My Overall Stats</label>
+  <button onclick="getOverview()">Get Overview →</button>
+  <pre id="analytics-overview-result">Result will appear here...</pre>
 </div>
 
 <script>
   const BASE = "http://127.0.0.1:8000";
   let token = "";
+  let activeSessionId = null;
+  let currentQuestion = null;
 
   async function login() {
     const email = document.getElementById("email").value;
@@ -149,6 +219,146 @@
     document.getElementById("gap-result").textContent = JSON.stringify(data, null, 2);
   }
 
+  async function startSession() {
+    if (!token) { document.getElementById("start-result").textContent = "❌ Login first!"; return; }
+    const job_role = document.getElementById("session-job-role").value;
+    const job_description = document.getElementById("session-jd").value;
+    if (!job_role || !job_description) {
+      document.getElementById("start-result").textContent = "❌ Fill in job role and description!";
+      return;
+    }
+    document.getElementById("start-result").textContent = "⏳ Starting session — RAG + Claude generating questions...";
+    const res = await fetch(`${BASE}/interview/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ job_role, job_description })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById("start-result").textContent = "❌ " + JSON.stringify(data, null, 2);
+      return;
+    }
+    activeSessionId = data.session_id;
+    document.getElementById("display-session-id").textContent = activeSessionId;
+    document.getElementById("display-analytics-session-id").textContent = activeSessionId;
+    document.getElementById("analytics-session-id").value = activeSessionId;
+    document.getElementById("start-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getNextQuestion() {
+    const output = document.getElementById("next-question-output");
+    if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
+    if (!activeSessionId) { output.innerHTML = `<pre style="color:#f87171">❌ Start a session first (Step 4)!</pre>`; return; }
+    output.innerHTML = `<pre style="color:#facc15">⏳ Fetching next question...</pre>`;
+    const res = await fetch(`${BASE}/interview/next-question?session_id=${activeSessionId}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      output.innerHTML = `<pre style="color:#f87171">❌ ${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+    if (data.session_complete) {
+      currentQuestion = null;
+      document.getElementById("display-current-question").textContent = "All questions answered!";
+      output.innerHTML = `<pre style="color:#4ade80">✅ ${data.message}</pre>`;
+      return;
+    }
+    currentQuestion = data.current_question;
+    document.getElementById("display-current-question").textContent = currentQuestion;
+    output.innerHTML = `
+      <div class="current-question-box">
+        <div class="q-label">Question ${data.answered + 1} of ${data.total}</div>
+        <div class="q-body">${data.current_question}</div>
+      </div>`;
+  }
+
+  async function submitAnswer() {
+    const output = document.getElementById("submit-result-output");
+    if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
+    if (!activeSessionId) { output.innerHTML = `<pre style="color:#f87171">❌ Start a session first (Step 4)!</pre>`; return; }
+    if (!currentQuestion) { output.innerHTML = `<pre style="color:#f87171">❌ Get a question first (Step 5)!</pre>`; return; }
+    const answer = document.getElementById("submit-answer").value;
+    if (!answer) { output.innerHTML = `<pre style="color:#f87171">❌ Type your answer first!</pre>`; return; }
+    output.innerHTML = `<pre style="color:#facc15">⏳ Claude is evaluating your answer and saving to DB...</pre>`;
+    const res = await fetch(`${BASE}/interview/submit-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ session_id: activeSessionId, answer })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      output.innerHTML = `<pre style="color:#f87171">❌ ${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+    const score = data.score;
+    const scoreColor = score >= 8 ? "#4ade80" : score >= 5 ? "#facc15" : "#f87171";
+    output.innerHTML = `
+      <div class="eval-result">
+        <div class="score-box">
+          <div class="score-number" style="color:${scoreColor}">${score}<span style="font-size:24px; color:#888">/10</span></div>
+          <div class="score-label">Score saved to DB ✅</div>
+        </div>
+        <div class="eval-section strengths">
+          <h3>✅ Strengths</h3>
+          <p>${data.strengths || "—"}</p>
+        </div>
+        <div class="eval-section improvements">
+          <h3>⚠️ Improvements</h3>
+          <p>${data.improvements || "—"}</p>
+        </div>
+        <div class="eval-section ideal">
+          <h3>💡 Ideal Answer</h3>
+          <p>${data.ideal_answer || "—"}</p>
+        </div>
+      </div>
+      <p style="color:#888; font-size:13px; margin-top:12px;">← Go back to Step 5 for the next question</p>`;
+    document.getElementById("submit-answer").value = "";
+    currentQuestion = null;
+    document.getElementById("display-current-question").textContent = "Answered — get next question";
+  }
+
+  async function finishSession() {
+    if (!token) { document.getElementById("finish-result").textContent = "❌ Login first!"; return; }
+    if (!activeSessionId) { document.getElementById("finish-result").textContent = "❌ Start a session first (Step 4)!"; return; }
+    document.getElementById("finish-result").textContent = "⏳ Finishing session...";
+    const res = await fetch(`${BASE}/interview/finish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ session_id: activeSessionId })
+    });
+    const data = await res.json();
+    document.getElementById("finish-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getSessionSummary() {
+    const output = document.getElementById("summary-output");
+    if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
+    if (!activeSessionId) { output.innerHTML = `<pre style="color:#f87171">❌ Start a session first (Step 4)!</pre>`; return; }
+    output.innerHTML = `<pre style="color:#facc15">⏳ Loading summary...</pre>`;
+    const res = await fetch(`${BASE}/interview/session-summary?session_id=${activeSessionId}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      output.innerHTML = `<pre style="color:#f87171">❌ ${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+    const avgColor = data.avg_score >= 8 ? "#4ade80" : data.avg_score >= 5 ? "#facc15" : "#f87171";
+    output.innerHTML = `
+      <div class="summary-grid">
+        <div class="summary-stat">
+          <div class="val" style="color:${avgColor}">${data.avg_score}</div>
+          <div class="key">Avg Score / 10</div>
+        </div>
+        <div class="summary-stat">
+          <div class="val">${data.answered_questions}</div>
+          <div class="key">Questions Answered</div>
+        </div>
+      </div>
+      <pre style="margin-top:16px">${JSON.stringify(data, null, 2)}</pre>`;
+  }
+
   async function generateQuestions() {
     const output = document.getElementById("questions-output");
     if (!token) { output.innerHTML = `<pre style="color:#f87171">❌ Login first!</pre>`; return; }
@@ -168,14 +378,9 @@
     let html = `<div style="margin-top:12px; margin-bottom:8px; color:#888; font-size:13px;">
       Session ID: <strong style="color:#facc15">${data.session_id}</strong> &nbsp;|&nbsp;
       <span class="badge badge-success">✅ ${data.total} Questions Generated</span>
-    </div>`;
-    html += `<div class="question-list">`;
+    </div><div class="question-list">`;
     data.questions.forEach((q, i) => {
-      html += `
-        <div class="question-item">
-          <div class="q-num">${i + 1}</div>
-          <div class="q-text">${q}</div>
-        </div>`;
+      html += `<div class="question-item"><div class="q-num">${i + 1}</div><div class="q-text">${q}</div></div>`;
     });
     html += `</div>`;
     output.innerHTML = html;
@@ -210,19 +415,45 @@
           <div class="score-number" style="color:${scoreColor}">${score}<span style="font-size:24px; color:#888">/10</span></div>
           <div class="score-label">Interview Answer Score</div>
         </div>
-        <div class="eval-section strengths">
-          <h3>✅ Strengths</h3>
-          <p>${data.strengths || "—"}</p>
-        </div>
-        <div class="eval-section improvements">
-          <h3>⚠️ Improvements</h3>
-          <p>${data.improvements || "—"}</p>
-        </div>
-        <div class="eval-section ideal">
-          <h3>💡 Ideal Answer</h3>
-          <p>${data.ideal_answer || "—"}</p>
-        </div>
+        <div class="eval-section strengths"><h3>✅ Strengths</h3><p>${data.strengths || "—"}</p></div>
+        <div class="eval-section improvements"><h3>⚠️ Improvements</h3><p>${data.improvements || "—"}</p></div>
+        <div class="eval-section ideal"><h3>💡 Ideal Answer</h3><p>${data.ideal_answer || "—"}</p></div>
       </div>`;
+  }
+
+  async function saveAnalytics() {
+    if (!token) { document.getElementById("analytics-save-result").textContent = "❌ Login first!"; return; }
+    // ← FIXED: parseInt prevents empty string being sent as URL segment
+    const inputVal = parseInt(document.getElementById("analytics-session-id").value);
+    const session_id = inputVal || activeSessionId;
+    if (!session_id) { document.getElementById("analytics-save-result").textContent = "❌ No session ID found! Start a session first."; return; }
+    document.getElementById("analytics-save-result").textContent = "⏳ Saving analytics...";
+    const res = await fetch(`${BASE}/analytics/save/${session_id}`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-save-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getHistory() {
+    if (!token) { document.getElementById("analytics-history-result").textContent = "❌ Login first!"; return; }
+    document.getElementById("analytics-history-result").textContent = "⏳ Fetching history...";
+    const res = await fetch(`${BASE}/analytics/history`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-history-result").textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function getOverview() {
+    if (!token) { document.getElementById("analytics-overview-result").textContent = "❌ Login first!"; return; }
+    document.getElementById("analytics-overview-result").textContent = "⏳ Fetching overview...";
+    const res = await fetch(`${BASE}/analytics/overview`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    document.getElementById("analytics-overview-result").textContent = JSON.stringify(data, null, 2);
   }
 </script>
 

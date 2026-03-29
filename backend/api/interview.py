@@ -34,6 +34,7 @@ class EvaluateAnswerRequest(BaseModel):
 
 class StartSessionRequest(BaseModel):
     job_role: str
+    job_description: str = ""          # ← FIXED: was missing, caused empty questions
     resume_id: Optional[int] = None
     num_questions: int = 5
 
@@ -107,7 +108,6 @@ async def api_evaluate_answer(
         job_role=request.job_role
     )
 
-    # ← FIXED: "feedback" key doesn't exist, use "strengths" + "improvements"
     feedback_text = result.get("strengths", "") + " " + result.get("improvements", "")
 
     feedback = Feedback(
@@ -159,7 +159,7 @@ def get_my_feedback(
 
 
 # ─────────────────────────────────────────────
-# NEW ENDPOINTS — Day 8
+# SESSION ENDPOINTS
 # ─────────────────────────────────────────────
 
 @router.post("/start")
@@ -170,10 +170,18 @@ async def start_session(
 ):
     resume_text = _get_resume_text(request.resume_id, current_user.id, db)
 
+    # ← FIXED: use job_description, fallback to job_role if empty
     questions = await generate_questions_service(
         resume_text=resume_text or "",
-        job_description=request.job_role
+        job_description=request.job_description or request.job_role
     )
+
+    # ← FIXED: guard against empty questions list
+    if not questions:
+        raise HTTPException(
+            status_code=500,
+            detail="Question generation failed. Upload your resume first, then retry."
+        )
 
     session = InterviewSession(
         user_id=current_user.id,
@@ -282,7 +290,6 @@ async def submit_answer(
         job_role=session.job_role
     )
 
-    # ← FIXED: use strengths + improvements as feedback_text
     feedback_text = result.get("strengths", "") + " " + result.get("improvements", "")
 
     feedback = Feedback(
